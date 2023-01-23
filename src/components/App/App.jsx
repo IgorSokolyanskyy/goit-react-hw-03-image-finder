@@ -1,87 +1,155 @@
 import React, { Component } from 'react';
-import ContactForm from '../ContactForm';
-import ContactList from '../ContactList';
-import Filter from '../Filter';
-import contacts from 'data/contacts.json';
-import { nanoid } from 'nanoid';
-import { Container, Title, Subtitle, P } from './App.styled';
+import Button from '../Button';
+import ImageGallery from '../ImageGallery';
+import fetchImages from '../Api/images-Api';
+import Searchbar from '../Searchbar';
+import Notiflix from 'notiflix';
+import Loader from '../Loader';
+import './App.css';
 
 export class App extends Component {
   state = {
-    contacts,
-    filter: '',
+    inputData: '',
+    items: [],
+    status: 'idle',
+    totalHits: 0,
+    page: 1,
+    scroll: 0,
   };
 
-  addContact = ({ name, number }) => {
-    const contact = {
-      id: nanoid(),
-      name,
-      number,
-    };
+  componentDidUpdate(_, prevState) {
+    const { page, inputData, scroll } = this.state;
 
-    const { contacts } = this.state;
+    if (prevState.page !== page || prevState.inputData !== inputData) {
+      this.setState({ status: 'pending' });
 
-    if (
-      contacts.find(
-        contact => contact.name.toLowerCase() === name.toLowerCase()
-      )
-    ) {
-      alert(`${name} is already in contacts.`);
-      return;
+      fetchImages(inputData, page)
+        .then(data => {
+          if (!data.hits.length) {
+            this.setState({ status: 'idle' });
+            Notiflix.Notify.failure(
+              'Sorry, there are no images matching your search query. Please try again.'
+            );
+          } else {
+            this.setState(prevState => ({
+              items: [...prevState.items, ...data.hits],
+              totalHits: data.totalHits,
+              status: 'resolved',
+              scroll: document.documentElement.scrollHeight,
+            }));
+          }
+        })
+        .catch(error => {
+          this.setState({ status: 'rejected' });
+        });
     }
-    if (contacts.find(contact => contact.number === number)) {
-      alert(`${number} is already in contacts.`);
-      return;
+
+    if (prevState.scroll !== scroll && page > 1) {
+      window.scrollTo({
+        top: this.state.scroll - 240,
+        behavior: 'smooth',
+      });
     }
+  }
 
-    this.setState(({ contacts }) => ({
-      contacts: [contact, ...contacts],
+  handleSubmit = inputData => {
+    this.setState({ inputData, page: 1 });
+  };
+
+  getLoadMore = () => {
+    this.setState(prevState => ({
+      page: prevState.page + 1,
     }));
-  };
-
-  changeFilter = e => {
-    this.setState({ filter: e.currentTarget.value });
-  };
-
-  deleteContact = contactId => {
-    this.setState(({ contacts }) => ({
-      contacts: contacts.filter(contact => contact.id !== contactId),
-    }));
-  };
-
-  getVisibleContacts = () => {
-    const { contacts, filter } = this.state;
-    const normalizedFilter = filter.toLowerCase();
-
-    return contacts.filter(contact =>
-      contact.name.toLowerCase().includes(normalizedFilter)
-    );
   };
 
   render() {
-    const { contacts, filter } = this.state;
-    const visibelContacts = this.getVisibleContacts();
+    const { totalHits, status, items, page } = this.state;
 
-    return (
-      <Container>
-        <Title>Phonebook</Title>
+    if (status === 'idle') {
+      return (
+        <div className="App">
+          <Searchbar onSubmit={this.handleSubmit} />
+        </div>
+      );
+    }
 
-        <ContactForm onSubmit={this.addContact} />
+    if (status === 'pending') {
+      return (
+        <div className="App">
+          <Searchbar onSubmit={this.handleSubmit} />
+          <ImageGallery page={page} items={items} />
+          <Loader />
+          {totalHits > 12 && <Button onClick={this.getLoadMore} />}
+        </div>
+      );
+    }
 
-        <Subtitle>Contacts</Subtitle>
+    if (status === 'rejected') {
+      return (
+        <div className="App">
+          <Searchbar onSubmit={this.handleSubmit} />
+          <p>Something wrong, try later</p>
+        </div>
+      );
+    }
 
-        {contacts.length > 1 && (
-          <Filter value={filter} onChange={this.changeFilter} />
-        )}
-        {contacts.length > 0 ? (
-          <ContactList
-            contacts={visibelContacts}
-            onDeleteContact={this.deleteContact}
-          />
-        ) : (
-          <P>Your phonebook is empty. Please add contact.</P>
-        )}
-      </Container>
-    );
+    if (status === 'resolved') {
+      return (
+        <div className="App">
+          <Searchbar onSubmit={this.handleSubmit} />
+          <ImageGallery page={page} items={items} />
+          {totalHits > 12 && totalHits > items.length && (
+            <Button onClick={this.getLoadMore} />
+          )}
+        </div>
+      );
+    }
   }
 }
+// handleSubmit = async inputData => {
+//   page = 1;
+
+//   if (inputData.trim() === '') {
+//     return Notiflix.Notify.info(
+//       'You cannot search by empty field, try again.'
+//     );
+//   } else {
+//     try {
+//       this.setState({ status: 'pending' });
+//       const { totalHits, hits } = await fetchImages(inputData, page);
+
+//       if (!hits.length) {
+//         this.setState({ status: 'idle' });
+//         Notiflix.Notify.failure(
+//           'Sorry, there are no images matching your search query. Please try again.'
+//         );
+//       } else {
+//         this.setState({
+//           items: hits,
+//           inputData,
+//           totalHits: totalHits,
+//           status: 'resolved',
+//           scroll: document.documentElement.scrollHeight,
+//         });
+//       }
+//     } catch (error) {
+//       this.setState({ status: 'rejected' });
+//     }
+//   }
+// };
+
+// onNextPage = async () => {
+//   this.setState({ status: 'pending' });
+
+//   try {
+//     const { hits } = await fetchImages(this.state.inputData, (page += 1));
+
+//     this.setState(prevState => ({
+//       items: [...prevState.items, ...hits],
+//       status: 'resolved',
+//     }));
+
+//   } catch (error) {
+//     this.setState({ status: 'rejected' });
+//   }
+// };
