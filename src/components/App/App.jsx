@@ -53,7 +53,7 @@ export class App extends Component {
   }
 
   handleSubmit = inputData => {
-    this.setState({ inputData, page: 1 });
+    this.setState({ inputData, page: 1, items: [] });
   };
 
   getLoadMore = () => {
@@ -63,7 +63,7 @@ export class App extends Component {
   };
 
   render() {
-    const { totalHits, status, items, page } = this.state;
+    const { totalHits, status, items } = this.state;
 
     if (status === 'idle') {
       return (
@@ -77,7 +77,7 @@ export class App extends Component {
       return (
         <div className="App">
           <Searchbar onSubmit={this.handleSubmit} />
-          <ImageGallery page={page} items={items} />
+          <ImageGallery items={items} />
           <Loader />
           {totalHits > 12 && <Button onClick={this.getLoadMore} />}
         </div>
@@ -97,7 +97,7 @@ export class App extends Component {
       return (
         <div className="App">
           <Searchbar onSubmit={this.handleSubmit} />
-          <ImageGallery page={page} items={items} />
+          <ImageGallery items={items} />
           {totalHits > 12 && totalHits > items.length && (
             <Button onClick={this.getLoadMore} />
           )}

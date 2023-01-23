@@ -5,7 +5,10 @@ import './ImageGalleryItem.css';
 
 class ImageGalleryItem extends Component {
   static propTypes = {
-    item: PropTypes.object.isRequired,
+    item: PropTypes.shape({
+      user: PropTypes.string.isRequired,
+      webformatURL: PropTypes.string.isRequired,
+    }),
   };
 
   state = {
@@ -18,7 +21,7 @@ class ImageGalleryItem extends Component {
 
   render() {
     const { item } = this.props;
-    const { webformatURL } = item;
+    const { webformatURL, user } = item;
 
     return (
       <li className="ImageGalleryItem">
@@ -26,7 +29,7 @@ class ImageGalleryItem extends Component {
           onClick={this.toggleModal}
           className="ImageGalleryItem-image"
           src={webformatURL}
-          alt="img"
+          alt={user}
         />
         {this.state.shownModal && (
           <Modal onClose={this.toggleModal} image={item} />
